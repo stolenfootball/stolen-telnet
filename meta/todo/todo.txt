@@ -1,0 +1,7 @@
+Implement TCP server / client able to send packets back and forth to each other
+
+Create framework for transmitting / receiving control characters
+
+Create NVT and link it to control characters
+
+Create framework for options and create basic options

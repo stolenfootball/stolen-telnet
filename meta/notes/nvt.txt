@@ -1,0 +1,79 @@
+The NVT is a bidirectional character device.  
+
+It has a printer and a keyboard.  
+    The printer responds to incoming data 
+    The keyboard produces outgoing data which is sent over the TELNET connection.
+    If "echos" are desired, the keyboard can send to the printer as well
+
+The codes will all be transmitted in 7 bit ASCII in an 8 bit field
+
+Transmission of Data:
+    Insofar as the availability of local buffer space permits, data should be accumulated in the host until a complete line is ready for transmission, or a signal to send occurs
+        Since is is sometimes necessary, any implementation should have the ability for the user to trigger an option to send all data immediately
+    When a process has completed sending data to an NVT printer an has no queued input from the NVT keyboard (it is waiting for information from the other end of the connection) it must send a TELNET GA (Go Ahead) signal.  This signal should only be sent when the sending computer is completely done.
+
+Control Functions:
+    If any of these functions is not present on the local computer, it TELNET can treat the function as a no-operation.  Otherwise, it must allow the remote user access to these functions:
+
+    Interrupt Process (IP) - effectively CTRL-C, interrupt current process
+    Abort Output (AO) - stop sending output accross the connection but continue the process.  Similar to CTRL-Z.  Always send a SYNCH signal after
+    Are You There (AYT) - give printable evidence that the system is still online
+    Erase Character (EC) - erase the last preceding undeleted character from the data stream
+    Erase Line (EL) - erase all characters from the end of a data stream until finding a CRLF
+
+    SYNCH
+        The TELNET synch signal works as an inturrupt over the network.  It transmits a TCP urgent packet, coupled with the TELNET command DATA MARK (DM)
+        When the urgent command is received, the input stream is scanned for interesting signals, and the rest of the stream discarded.
+        The DM signal is a synchronizing mark in the data stream that indicates that the special signal has already occured and the recepient can go back to normal operation.
+
+        The Synch signal is sent via a TCP send operation with an Urgent flag send and the DM as the last (or only) data octet.
+
+        When several Synchs are sent in rapid succession, the Urgent requests may be merged.
+
+        When in normal mode, DM is a no operation, when in Urgent mode, the DM signals the end of Urgent mode
+
+        If TCP indicates the end of urgent data before a DM is received, the stream should continue being processed as urgent until the DM is received.
+        IF TCP starts sending Urgent data again immediately following a DM, it means its a new Urgent request and should be treated as such until another DM is found.
+
+    Interesting signals for an Urgent stream:
+        IP, AO, and AYT (not EC or EL), the local analogs of those representations, all other TELNET commands, other site-defined signals which can be acted upon without delaying the scan of the data stream.
+
+    Since one effect of the SYNCH command is the discarding of all characters except TELNET commands in the data stream, it is specified as the standard way to clear the data stream.  For example, if a user causes an AO to be transmitted, the server which receives the AO should return a SYNCH to the user.
+
+    Like TELNET using the TCP Urgent signal as an out of band signal that is necessary for operation, other applications may use a TELNET command as an out of band signal.  The standard use of this is to send an IP command then a SYNCH command.
+
+    If a protocol that uses TELNET wishes to use the STOP signal as TELNET does AO, the following is the correct order:
+        1.) Send the TELNET IP character
+        2.) Send the TELNET SYNCH sequence with only the DM in the TCP Urgent request
+        3.) Send the STOP string
+        4.) Send the other protocol's analog of the TELNET DM\
+
+NVT Printer and Keyboard
+    The NVT printer has an unspecified carriage width and page length and can produce representations of all 95 ASCII graphics.
+    Of the 33 ASCII control codes (0-31 and 127) and the 128 uncovered codes (128-255), the following have specific meaning to the NVT printer
+
+    NULL (NUL) - No operation
+    Line Feed (LF) - moves the printer to the next print line, keeping the same horizontal position
+    Carriage Return (CR) - Moves the printer to the left margin
+
+    The following codes have defined, but not required, effects on the NVT printer.  Neither end of a TELNET connection may assume that the other party will take, or will have taken, any action upon receipt or transmission of these:
+
+    BELL (BEL) - make ding
+    Back Space (BS) - move the print head one character position towards the left margin
+    Horizontal Tab (HT) - move the print head to the next horizontal tab stop.  What a tab stop is is not defined
+    Vertical Tab (VT) - move the print head to the next vertical tab stop. Tab stop is not defined
+    Form Feed (FF) - move the printer to the top of the next page, keeping the same horizontal position
+
+All remaining codes do not cause the NVT printer to take any action.
+
+The following must also have the ability to be accessed from the NVT keyboard:
+    Synch
+    Break
+    IP
+    AO
+    AYT
+    EC
+    EL
+
+All keys should be mapped to their local counterparts as much as is possible to avoid confusion
+
